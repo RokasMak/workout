@@ -1,6 +1,6 @@
 {
-  "name": "Rokas: The Final Workout",
-  "short_name": "Rokas",
+  "name": "Workout",
+  "short_name": "Workout",
   "description": "Three-session workout countdown with voice cues.",
   "start_url": ".",
   "scope": "./",
