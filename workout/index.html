@@ -1,0 +1,753 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Workout</title>
+<meta name="description" content="A three-session workout countdown for tablets, with big legible timers, per-session exercise lists, and voice cues at the halfway mark, one minute left, and the final ten seconds.">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#f4f5fd">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Workout">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@600;800;900&family=Inter:wght@400;500;600;700;800&display=swap">
+<style>
+  :root{
+    --bg:#f4f5fd;
+    --bg-grain:#ffffff;
+    --surface:#ffffff;
+    --surface-2:#eceefc;
+    --border:#d3d8f6;
+    --border-soft:#e6e9fb;
+    --text:#000244;
+    --text-dim:#4c4d7c;
+    --text-faint:#6b6da8;
+    --accent:#1318c8;
+    --accent-ink:#ffffff;
+    --normal:#0e9f6e;
+    --normal-ink:#ffffff;
+    --warn:#c2650a;
+    --warn-ink:#ffffff;
+    --critical:#dc2626;
+    --critical-ink:#ffffff;
+    --done:#0e9f6e;
+    font-variant-numeric: tabular-nums;
+  }
+
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    background:var(--bg);
+    background-image:
+      radial-gradient(circle at 15% 8%, rgba(19,24,200,0.07), transparent 45%),
+      radial-gradient(circle at 90% 90%, rgba(14,159,110,0.06), transparent 40%);
+    color:var(--text);
+    font-family:'Inter',system-ui,sans-serif;
+    overflow:hidden;
+  }
+
+  .app{
+    height:100%;
+    display:flex;
+    flex-direction:column;
+  }
+
+  /* ---------- top bar ---------- */
+  .topbar{
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    gap:18px;
+    padding:12px clamp(14px,2vw,26px);
+    padding-top:calc(12px + env(safe-area-inset-top,0px));
+    border-bottom:1px solid var(--border-soft);
+    background:var(--bg-grain);
+  }
+  .brand{
+    font-family:'Archivo',sans-serif;
+    font-weight:900;
+    letter-spacing:0.02em;
+    font-size:clamp(14px,1.6vw,18px);
+    color:var(--text);
+    white-space:nowrap;
+  }
+  .brand span{color:var(--accent);}
+  .dots{
+    display:flex;
+    gap:10px;
+    margin-left:6px;
+  }
+  .dot-btn{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    border:1px solid var(--border);
+    background:var(--surface);
+    color:var(--text-dim);
+    border-radius:999px;
+    padding:6px 14px 6px 8px;
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:12.5px;
+    letter-spacing:0.03em;
+    cursor:pointer;
+    transition:border-color .15s, color .15s, background .15s;
+  }
+  .dot-btn:hover{border-color:var(--text-faint);}
+  .dot-btn .pip{
+    width:18px;height:18px;border-radius:50%;
+    display:flex;align-items:center;justify-content:center;
+    font-size:10px;font-weight:800;
+    background:var(--surface-2);
+    color:var(--text-faint);
+    flex:0 0 auto;
+  }
+  .dot-btn[data-state="current"]{color:var(--text); border-color:var(--accent);}
+  .dot-btn[data-state="current"] .pip{background:var(--accent); color:var(--accent-ink);}
+  .dot-btn[data-state="done"] .pip{background:var(--done); color:var(--normal-ink);}
+  .dot-btn[data-state="done"]{color:var(--text-dim);}
+
+  .topbar-spacer{flex:1 1 auto;}
+
+  .menu-btn{
+    display:flex; align-items:center; gap:8px;
+    border:1px solid var(--border);
+    background:var(--surface);
+    color:var(--text);
+    padding:8px 14px;
+    border-radius:10px;
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:13px;
+    cursor:pointer;
+    text-decoration:none;
+  }
+  .menu-btn:hover{border-color:var(--text-faint);}
+  .menu-btn svg{width:16px;height:16px;flex:0 0 auto;}
+
+  /* ---------- main layout ---------- */
+  .main{
+    flex:1 1 auto;
+    display:flex;
+    min-height:0;
+  }
+
+  .stage{
+    flex:1 1 auto;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    min-width:0;
+    padding:20px;
+    position:relative;
+  }
+  .stage-inner{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:clamp(10px,2vh,22px);
+    text-align:center;
+    max-width:92%;
+  }
+  .eyebrow{
+    font-family:'Inter',sans-serif;
+    font-weight:800;
+    letter-spacing:0.16em;
+    text-transform:uppercase;
+    font-size:clamp(14px,1.5vw,18px);
+    color:var(--text-faint);
+  }
+  .part-title{
+    font-family:'Archivo',sans-serif;
+    font-weight:900;
+    font-size:clamp(34px,5.6vw,68px);
+    line-height:1.02;
+    margin:0;
+    text-wrap:balance;
+    color:var(--text);
+  }
+  .duration-badge{
+    font-family:'Inter',sans-serif;
+    font-weight:700;
+    font-size:clamp(16px,1.7vw,20px);
+    color:var(--text-dim);
+    background:var(--surface);
+    border:1px solid var(--border);
+    padding:6px 16px;
+    border-radius:999px;
+  }
+
+  .btn{
+    font-family:'Inter',sans-serif;
+    font-weight:800;
+    font-size:clamp(15px,1.7vw,20px);
+    letter-spacing:0.01em;
+    border:none;
+    border-radius:14px;
+    padding:clamp(14px,2vh,20px) clamp(34px,5vw,64px);
+    cursor:pointer;
+    transition:transform .1s ease, filter .15s ease;
+  }
+  .btn:active{transform:scale(0.97);}
+  .btn-start{background:var(--accent); color:var(--accent-ink);}
+  .btn-start:hover{filter:brightness(1.08);}
+  .btn-ghost{
+    background:transparent;
+    color:var(--text-dim);
+    border:1px solid var(--border);
+    font-size:clamp(13px,1.3vw,15px);
+    padding:12px 26px;
+  }
+  .btn-ghost:hover{color:var(--text); border-color:var(--text-faint);}
+  .btn-row{display:flex; gap:14px; flex-wrap:wrap; justify-content:center;}
+
+  .timer-digits{
+    font-family:'Archivo',sans-serif;
+    font-weight:900;
+    font-size:clamp(140px,34vh,380px);
+    line-height:1;
+    letter-spacing:-0.02em;
+    color:var(--normal);
+    transition:color .3s ease;
+  }
+  .timer-digits[data-stage="warn"]{color:var(--warn);}
+  .timer-digits[data-stage="critical"]{color:var(--critical);}
+  .timer-digits.pulse{animation:pulse .5s ease-out;}
+  @keyframes pulse{
+    0%{transform:scale(1.12);}
+    100%{transform:scale(1);}
+  }
+  @media (prefers-reduced-motion: reduce){
+    .timer-digits.pulse{animation:none;}
+    .btn{transition:none;}
+  }
+
+  .status-msg{
+    font-family:'Inter',sans-serif;
+    font-weight:600;
+    font-size:clamp(14px,1.6vw,19px);
+    color:var(--text-dim);
+    min-height:1.4em;
+  }
+  .status-msg[data-stage="warn"]{color:var(--warn);}
+  .status-msg[data-stage="critical"]{color:var(--critical);}
+
+  .complete-badge{
+    font-family:'Archivo',sans-serif;
+    font-weight:900;
+    font-size:clamp(15px,1.6vw,18px);
+    letter-spacing:0.08em;
+    color:var(--done);
+    text-transform:uppercase;
+  }
+
+  /* ---------- exercise panel ---------- */
+  .panel{
+    flex:0 0 340px;
+    max-width:34vw;
+    border-left:1px solid var(--border-soft);
+    background:var(--surface);
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+  }
+  .panel-head{
+    padding:18px 20px 14px;
+    border-bottom:1px solid var(--border-soft);
+    flex:0 0 auto;
+  }
+  .panel-head .label{
+    font-family:'Inter',sans-serif;
+    font-weight:800;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    font-size:14px;
+    color:var(--text-faint);
+    margin-bottom:6px;
+  }
+  .panel-head .name{
+    font-family:'Archivo',sans-serif;
+    font-weight:800;
+    font-size:26px;
+    color:var(--text);
+  }
+  .panel-body{
+    flex:1 1 auto;
+    overflow-y:auto;
+    padding:14px 20px 24px;
+  }
+  .group{margin-bottom:18px;}
+  .group:last-child{margin-bottom:0;}
+  .group-label{
+    font-family:'Inter',sans-serif;
+    font-weight:800;
+    font-size:15px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin-bottom:8px;
+  }
+  .ex-list{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:8px;}
+  .ex-item{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+    font-size:19px;
+    font-weight:500;
+    color:var(--text);
+    line-height:1.35;
+  }
+  .ex-item::before{
+    content:"";
+    width:6px; height:6px;
+    border-radius:50%;
+    background:var(--text-faint);
+    flex:0 0 auto;
+    margin-top:6px;
+  }
+
+  /* ---------- responsive: narrow / phone width ---------- */
+  @media (max-width:760px){
+    .main{flex-direction:column; overflow-y:auto;}
+    .stage{padding:16px 16px 8px; flex:0 0 auto; min-height:46vh;}
+    .timer-digits{font-size:clamp(72px,28vw,140px);}
+    .panel{flex:1 1 auto; max-width:none; border-left:none; border-top:1px solid var(--border-soft);}
+    .part-title{font-size:clamp(22px,6vw,32px);}
+    .topbar{flex-wrap:wrap; row-gap:10px;}
+    .brand{white-space:normal; flex:1 1 auto;}
+    .topbar-spacer{flex-basis:100%; height:0;}
+  }
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <div class="topbar">
+    <div class="brand"><span>WORKOUT</span></div>
+    <div class="dots" id="dots"></div>
+    <div class="topbar-spacer"></div>
+    <a class="menu-btn" href="exercise-plan.pdf" download>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 19h14"/></svg>
+      Exercise Plan
+    </a>
+    <a class="menu-btn" href="exercise-list.pdf" download>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="M7 10l5 5 5-5"/><path d="M5 19h14"/></svg>
+      Exercise List
+    </a>
+    <button class="menu-btn" id="fullscreenBtn">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M16 3h3a2 2 0 0 1 2 2v3"/><path d="M8 21H5a2 2 0 0 1-2-2v-3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg>
+      Full Screen
+    </button>
+  </div>
+
+  <div class="main">
+    <div class="stage" id="stage"></div>
+    <div class="panel">
+      <div class="panel-head">
+        <div class="label" id="panelLabel">Session 1 of 3</div>
+        <div class="name" id="panelName">Relay Race</div>
+      </div>
+      <div class="panel-body" id="panelBody"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var PARTS = [
+    {
+      title: "Relay Race",
+      duration: 720,
+      groups: [
+        { label: null, exercises: [
+          "6 burpees",
+          "12 goblet squats",
+          "10 push-ups",
+          "20 mountain climbers (10 per side)",
+          "5 box jumps",
+          "2 shuttle runs to the end of the gym and back"
+        ]}
+      ]
+    },
+    {
+      title: "Work & Suffer",
+      duration: 900,
+      groups: [
+        { label: "Station 1", exercises: ["8 man makers", "Wall sit"] },
+        { label: "Station 2", exercises: ["20 reverse lunges", "Plank"] },
+        { label: "Station 3", exercises: ["10 burpees", "Farmer hold"] }
+      ]
+    },
+    {
+      title: "Big Finale",
+      duration: 900,
+      groups: [
+        { label: null, exercises: [
+          "40 burpees",
+          "60 goblet squats",
+          "60 push-ups",
+          "30 plank dumbbell drags",
+          "100 walking lunges",
+          "40 box jumps"
+        ]}
+      ]
+    }
+  ];
+
+  var state = {
+    index: 0,
+    mode: "preview", // preview | running | complete
+    remaining: PARTS[0].duration,
+    completed: []
+  };
+
+  try {
+    var saved = JSON.parse(localStorage.getItem("circuit-timer-progress") || "null");
+    if (saved && Array.isArray(saved.completed)) {
+      state.completed = saved.completed.filter(function(n){ return Number.isInteger(n) && n >= 0 && n < PARTS.length; });
+      if (Number.isInteger(saved.index) && saved.index >= 0 && saved.index < PARTS.length) {
+        state.index = saved.index;
+      }
+    }
+  } catch (e) {}
+
+  function persist(){
+    try {
+      localStorage.setItem("circuit-timer-progress", JSON.stringify({ index: state.index, completed: state.completed }));
+    } catch (e) {}
+  }
+
+  var intervalHandle = null;
+  var endTimestamp = null;
+  var paused = false;
+  var pausedRemainingMs = null;
+  var announced = { half: false, oneMin: false, seconds: {} };
+
+  function speak(text){
+    try {
+      if (!("speechSynthesis" in window)) return;
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(text);
+      u.lang = "en-US";
+      u.volume = 1;
+      u.rate = 1;
+      u.pitch = 1;
+      window.speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+
+  function stopTimer(){
+    if (intervalHandle) { clearInterval(intervalHandle); intervalHandle = null; }
+    try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch(e) {}
+  }
+
+  function fmtTime(s){
+    var m = Math.floor(s / 60);
+    var ss = s % 60;
+    return String(m).padStart(2, "0") + ":" + String(ss).padStart(2, "0");
+  }
+
+  function spokenRemaining(s){
+    var m = Math.floor(s / 60);
+    var ss = s % 60;
+    var parts = [];
+    if (m > 0) parts.push(m + (m === 1 ? " minute" : " minutes"));
+    if (ss > 0) parts.push(ss + (ss === 1 ? " second" : " seconds"));
+    if (parts.length === 0) parts.push("0 seconds");
+    return parts.join(" ") + " remaining";
+  }
+
+  function goToPart(i){
+    stopTimer();
+    paused = false;
+    pausedRemainingMs = null;
+    state.index = i;
+    state.mode = "preview";
+    state.remaining = PARTS[i].duration;
+    announced = { half: false, oneMin: false, seconds: {} };
+    persist();
+    render();
+  }
+
+  function beginRun(){
+    enterFullscreen();
+    var part = PARTS[state.index];
+    state.mode = "running";
+    state.remaining = part.duration;
+    paused = false;
+    pausedRemainingMs = null;
+    announced = { half: false, oneMin: false, seconds: {} };
+    endTimestamp = Date.now() + part.duration * 1000;
+    render();
+    intervalHandle = setInterval(tick, 200);
+    tick();
+  }
+
+  function pauseRun(){
+    if (state.mode !== "running" || paused || !intervalHandle) return;
+    paused = true;
+    pausedRemainingMs = Math.max(0, endTimestamp - Date.now());
+    state.remaining = Math.ceil(pausedRemainingMs / 1000);
+    clearInterval(intervalHandle);
+    intervalHandle = null;
+    try { window.speechSynthesis && window.speechSynthesis.cancel(); } catch (e) {}
+    renderStage();
+  }
+
+  function resumeRun(){
+    if (state.mode !== "running" || !paused) return;
+    paused = false;
+    endTimestamp = Date.now() + (pausedRemainingMs || 0);
+    pausedRemainingMs = null;
+    intervalHandle = setInterval(tick, 200);
+    renderStage();
+  }
+
+  function tick(){
+    var part = PARTS[state.index];
+    var remaining = Math.max(0, Math.ceil((endTimestamp - Date.now()) / 1000));
+    state.remaining = remaining;
+
+    var half = Math.floor(part.duration / 2);
+    if (!announced.half && remaining <= half) {
+      announced.half = true;
+      speak(spokenRemaining(remaining));
+    }
+    if (!announced.oneMin && remaining === 60) {
+      announced.oneMin = true;
+      speak(spokenRemaining(remaining));
+    }
+    if (remaining <= 10 && !announced.seconds[remaining]) {
+      announced.seconds[remaining] = true;
+      if (remaining > 0) speak(String(remaining));
+      else speak("Stop!");
+    }
+
+    renderStage();
+
+    if (remaining <= 0) {
+      finishPart();
+    }
+  }
+
+  function finishPart(){
+    if (intervalHandle) { clearInterval(intervalHandle); intervalHandle = null; }
+    state.mode = "complete";
+    if (state.completed.indexOf(state.index) === -1) state.completed.push(state.index);
+    persist();
+    render();
+  }
+
+  function stageClass(remaining, duration){
+    if (remaining <= 60) return "critical";
+    if (remaining <= Math.floor(duration / 2)) return "warn";
+    return "normal";
+  }
+
+  function el(tag, cls, html){
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (html !== undefined) e.innerHTML = html;
+    return e;
+  }
+
+  function renderDots(){
+    var dots = document.getElementById("dots");
+    dots.innerHTML = "";
+    PARTS.forEach(function(p, i){
+      var isDone = state.completed.indexOf(i) !== -1;
+      var isCurrent = i === state.index;
+      var btn = el("button", "dot-btn");
+      btn.setAttribute("data-state", isCurrent ? "current" : (isDone ? "done" : "pending"));
+      var pip = el("span", "pip", isDone && !isCurrent ? "&#10003;" : String(i + 1));
+      btn.appendChild(pip);
+      btn.appendChild(document.createTextNode("S" + (i + 1)));
+      btn.addEventListener("click", function(){ goToPart(i); });
+      dots.appendChild(btn);
+    });
+  }
+
+  function renderPanel(){
+    var part = PARTS[state.index];
+    document.getElementById("panelLabel").textContent = "Session " + (state.index + 1) + " of " + PARTS.length;
+    document.getElementById("panelName").textContent = part.title;
+    var body = document.getElementById("panelBody");
+    body.innerHTML = "";
+    part.groups.forEach(function(g){
+      var group = el("div", "group");
+      if (g.label) group.appendChild(el("div", "group-label", g.label));
+      var list = el("ul", "ex-list");
+      g.exercises.forEach(function(x){
+        list.appendChild(el("li", "ex-item", escapeHtml(x)));
+      });
+      group.appendChild(list);
+      body.appendChild(group);
+    });
+  }
+
+  function escapeHtml(s){
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  }
+
+  function renderStage(){
+    var stage = document.getElementById("stage");
+    var part = PARTS[state.index];
+
+    if (state.mode === "preview") {
+      stage.innerHTML = "";
+      stage.dataset.mode = "preview";
+      var wrap = el("div", "stage-inner");
+      wrap.appendChild(el("div", "eyebrow", "Session " + (state.index + 1) + " of " + PARTS.length));
+      wrap.appendChild(el("h1", "part-title", part.title));
+      var mins = part.duration / 60;
+      var exCount = countExercises(part);
+      var stationCount = part.groups.filter(function(g){ return g.label; }).length;
+      var badgeText = mins + (mins === 1 ? " minute" : " minutes");
+      if (stationCount > 0) {
+        badgeText += " &middot; " + stationCount + (stationCount === 1 ? " station" : " stations");
+      }
+      badgeText += " &middot; " + exCount + (exCount === 1 ? " exercise" : " exercises");
+      wrap.appendChild(el("div", "duration-badge", badgeText));
+      var startBtn = el("button", "btn btn-start", "Start Session");
+      startBtn.addEventListener("click", beginRun);
+      wrap.appendChild(startBtn);
+      stage.appendChild(wrap);
+      return;
+    }
+
+    if (state.mode === "running") {
+      var cls = stageClass(state.remaining, part.duration);
+      var existingWrap = stage.dataset.mode === "running" ? stage.querySelector(".stage-inner") : null;
+      if (!existingWrap) {
+        stage.innerHTML = "";
+        stage.dataset.mode = "running";
+        existingWrap = el("div", "stage-inner");
+        var eyebrow = el("div", "eyebrow");
+        eyebrow.id = "runEyebrow";
+        var digits = el("div", "timer-digits");
+        digits.id = "digits";
+        var status = el("div", "status-msg");
+        status.id = "statusMsg";
+        var pauseBtn = el("button", "btn btn-ghost", "Pause");
+        pauseBtn.id = "pauseBtn";
+        pauseBtn.addEventListener("click", function(){
+          if (paused) resumeRun(); else pauseRun();
+        });
+        existingWrap.appendChild(eyebrow);
+        existingWrap.appendChild(digits);
+        existingWrap.appendChild(status);
+        existingWrap.appendChild(pauseBtn);
+        stage.appendChild(existingWrap);
+      }
+      var eyebrowEl = document.getElementById("runEyebrow");
+      eyebrowEl.textContent = part.title;
+      var digitsEl = document.getElementById("digits");
+      var prevText = digitsEl.textContent;
+      var newText = fmtTime(state.remaining);
+      digitsEl.textContent = newText;
+      digitsEl.setAttribute("data-stage", cls);
+      if (!paused && state.remaining <= 10 && prevText !== newText) {
+        digitsEl.classList.remove("pulse");
+        void digitsEl.offsetWidth;
+        digitsEl.classList.add("pulse");
+      }
+      var statusEl = document.getElementById("statusMsg");
+      statusEl.textContent = "";
+      statusEl.setAttribute("data-stage", cls);
+      var pauseBtnEl = document.getElementById("pauseBtn");
+      pauseBtnEl.textContent = paused ? "Resume" : "Pause";
+      return;
+    }
+
+    if (state.mode === "complete") {
+      stage.innerHTML = "";
+      stage.dataset.mode = "complete";
+      var isLast = state.index === PARTS.length - 1;
+      var allDone = state.completed.length === PARTS.length;
+      var wrap2 = el("div", "stage-inner");
+      wrap2.appendChild(el("div", "complete-badge", part.title + " complete"));
+      wrap2.appendChild(el("h1", "part-title", allDone ? "Workout complete!" : "Nice work!"));
+      var row = el("div", "btn-row");
+      if (!isLast) {
+        var nextBtn = el("button", "btn btn-start", "Next: " + PARTS[state.index + 1].title + " &rarr;");
+        nextBtn.addEventListener("click", function(){ goToPart(state.index + 1); });
+        row.appendChild(nextBtn);
+      } else {
+        var restartAllBtn = el("button", "btn btn-start", "Restart Workout");
+        restartAllBtn.addEventListener("click", function(){ goToPart(0); });
+        row.appendChild(restartAllBtn);
+      }
+      var restartBtn = el("button", "btn btn-ghost", "Restart " + part.title);
+      restartBtn.addEventListener("click", function(){ goToPart(state.index); });
+      row.appendChild(restartBtn);
+      wrap2.appendChild(row);
+      stage.appendChild(wrap2);
+      return;
+    }
+  }
+
+  function countExercises(part){
+    return part.groups.reduce(function(sum, g){ return sum + g.exercises.length; }, 0);
+  }
+
+  function render(){
+    renderDots();
+    renderPanel();
+    renderStage();
+  }
+
+  render();
+
+  // ---- full screen (covers the status bar and nav bar) ----
+  var fullscreenBtn = document.getElementById("fullscreenBtn");
+
+  function isFullscreen(){
+    return !!(document.fullscreenElement || document.webkitFullscreenElement);
+  }
+
+  function updateFullscreenBtn(){
+    try {
+      fullscreenBtn.lastChild.textContent = isFullscreen() ? "Exit Full Screen" : "Full Screen";
+    } catch (e) {}
+  }
+
+  function enterFullscreen(){
+    try {
+      var el = document.documentElement;
+      if (!isFullscreen()) {
+        var req = el.requestFullscreen || el.webkitRequestFullscreen;
+        if (req) req.call(el).catch(function(){});
+      }
+    } catch (e) {}
+  }
+
+  fullscreenBtn.addEventListener("click", function(){
+    try {
+      if (isFullscreen()) {
+        (document.exitFullscreen || document.webkitExitFullscreen).call(document);
+      } else {
+        enterFullscreen();
+      }
+    } catch (e) {}
+  });
+  document.addEventListener("fullscreenchange", updateFullscreenBtn);
+  document.addEventListener("webkitfullscreenchange", updateFullscreenBtn);
+
+  window.addEventListener("beforeinstallprompt", function(e){
+    e.preventDefault();
+  });
+
+  if ("serviceWorker" in navigator) {
+    window.addEventListener("load", function(){
+      navigator.serviceWorker.register("sw.js").catch(function(){});
+    });
+  }
+})();
+</script>
+</body>
+</html>
